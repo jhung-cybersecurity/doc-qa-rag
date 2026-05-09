@@ -3,4 +3,5 @@ venv/
 __pycache__/
 *.pyc
 chroma_db/
+query_log.jsonl
 
