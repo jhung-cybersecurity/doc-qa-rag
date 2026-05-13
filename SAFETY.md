@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the safety and reliability properties of `rag_app.py`, an insurance policy Q&A system built on Retrieval-Augmented Generation. It covers the threat model the system was designed to address, the three layers of defense currently implemented, observed behavior from real query logs, known failure modes, and proposed improvements for future versions.
+This document describes the safety and reliability properties of `rag.py`, an insurance policy Q&A system built on Retrieval-Augmented Generation. It covers the threat model the system was designed to address, the three layers of defense currently implemented, observed behavior from real query logs, known failure modes, and proposed improvements for future versions.
 
 ## Threat Model
 
