@@ -1,5 +1,4 @@
 # src/main.py
-"""CLI entry point for the Auto Policy Q&A RAG app."""
 from src.rag import ask
 
 def main():
@@ -15,7 +14,16 @@ def main():
         if not question:
             continue
 
-        ask(question)
+        result = ask(question)
+
+        print(f"\nA: {result['answer']}\n")
+
+        if result ["sources"]:
+            print("---Sources---")
+            for i, source in enumerate(result["sources"], start=1):
+                print(f"\n[Source {i}] Score: {source['score']:.4f} | Page: {source['page']}")
+                print(f"{source['text'][:200]}...")
+
 
 if __name__ == "__main__":
     main()

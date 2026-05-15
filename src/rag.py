@@ -27,6 +27,15 @@ from src.config import (
 from src.prompts import SYSTEM_PROMPT
 from src.logging_config import log_query
 
+REFUSAL_PHRASES = [
+    "i don't have information",
+    "i do not have information",
+    "not in the sources",
+    "not provided in the sources",
+    "i cannot answer",
+    "no information available",
+]
+
 load_dotenv()
 
 # --- Module-level setup (runs once on import) ---
@@ -51,25 +60,36 @@ else:
 
 
 # --- Per-query function ---
+def _detect_refusal(answer: str) -> bool:
+    """Heuristic: returns True if Claude's answer looks like a refusal."""
+    answer_lower = answer.lower()
+    return any(phrase in answer_lower for phrase in REFUSAL_PHRASES)
 
-def ask(question: str) -> str:
-    print(f"Q: {question}\n")
-
+def ask(question: str) -> dict:
+    """Run one query through the RAG piepline. Returns a structured results."""
     # retrieve
     retriever = index.as_retriever(similarity_top_k=TOP_K)
     nodes = retriever.retrieve(question)
 
-    # threshold gate
+    top_score = nodes[0].score if nodes else 0.0
+
+    # Layer 1: threshold gate
     if not nodes or nodes[0].score < SIMILARITY_THRESHOLD:
         refusal = "I can only answer questions about your auto policy."
-        print(f"A: {refusal}\n")
         log_query(
             question=question,
-            top_score=nodes[0].score if nodes else 0.0,
+            top_score=top_score,
             blocked=True,
             answer=refusal,
         )
-        return refusal
+        return {
+            "question": question,
+            "answer": refusal,
+            "blocked": True,
+            "top_score": top_score,
+            "sources": [],
+            "refusal_reason": "threshold",
+        }
 
     # build context + user message
     context = "\n\n".join(node.text for node in nodes)
@@ -85,7 +105,19 @@ Question: {question}"""
         ChatMessage(role="user", content=user_message),
     ])
     answer = response.message.content
-    print(f"A: {answer}\n")
+    
+    # Layer 2: did Claude refuse?
+    layer_2_refused = _detect_refusal(answer)
+
+    # build sources list
+    sources = [
+        {
+            "page": node.metadata.get("page_label", "n/a"),
+            "score": node.score,
+            "text": node.text,
+        }
+        for node in nodes
+    ]
 
     # log
     log_query(
@@ -94,13 +126,13 @@ Question: {question}"""
         blocked=False,
         answer=answer,
     )
+    return {
+        "question": question,
+        "answer": answer,
+        "blocked": layer_2_refused,
+        "top_score": top_score,
+        "sources": sources,
+        "refusal_reason": "prompt" if layer_2_refused else None,
+    }
 
-    # show sources
-    print("--- Sources ---")
-    for i, node in enumerate(nodes, start=1):
-        page = node.metadata.get("page_label", "n/a")
-        print(f"\n[Source {i}] Score: {node.score:.4f} | Page: {page}")
-        print(f"{node.text[:200]}...")
-
-    return answer
 

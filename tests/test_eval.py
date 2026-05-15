@@ -1,0 +1,112 @@
+# tests/test_eval.py
+"""Evaluation harness for the RAG pipeline.
+
+Runs a labeled test set through ask() and produces a pass/fail report.
+Run with: python -m tests.test_eval
+"""
+from src.rag import ask
+
+# --- Test set ---
+
+TEST_CASES = [
+    {
+        "id": 1,
+        "question": "what is the deductible for collision?",
+        "type": "on_topic",
+        "expected_blocked": False,
+        "expected_refusal_reason": None, 
+        "expected_phrases": [["500", "1000", "250"]],
+    },
+    {
+        "id": 2,
+        "question": "meaning of life",
+        "type": "off_topic",
+        "expected_blocked": True,
+        "expected_refusal_reason": "threshold", 
+        "expected_phrases": [],
+    },
+    {
+        "id": 3,
+        "question": "policy number for life insurance",
+        "type": "adversarial",
+        "expected_blocked": True,
+        "expected_refusal_reason": "prompt", 
+        "expected_phrases": [
+            ["life insurance"],
+            ["don't have", "do not have", "no information"],
+        ],
+    },
+    {
+        "id": 4,
+        "question": "can I cancel my policy?",
+        "type": "on_topic",
+        "expected_blocked": False,
+        "expected_refusal_reason": None, 
+        "expected_phrases": [["cancel", "cancellation"],["refund", "policy release"]],
+    },
+]
+
+
+# --- Checker ---
+
+def evaluate_case(case: dict) -> dict:
+    """Run one test case and return its result."""
+    result = ask(case["question"])
+    answer = result["answer"]
+
+    blocked_match = result["blocked"] == case["expected_blocked"]
+    reason_match = result["refusal_reason"] == case["expected_refusal_reason"]
+
+    # For each phrase group, at least ONE variant must appear in the answer
+    groups_matched = [
+        any(variant.lower() in answer.lower() for variant in group)
+        for group in case["expected_phrases"]
+    ]
+    phrases_match = all(groups_matched)
+
+    passed = blocked_match and reason_match and phrases_match
+
+    return {
+        "id": case["id"],
+        "question": case["question"],
+        "type": case["type"],
+        "passed": passed,
+        "blocked_match": blocked_match,
+        "reason_match": reason_match,
+        "phrases_match": phrases_match,
+        "groups_matched": groups_matched,
+        "top_score": result["top_score"],
+        "answer_preview": answer[:100] + "..." if len(answer) > 100 else answer,
+    }
+
+# --- Reporter ---
+
+def run_eval():
+    print("\n" + "=" * 60)
+    print("RAG EVALUATION HARNESS")
+    print("=" * 60 + "\n")
+
+    results = [evaluate_case(case) for case in TEST_CASES]
+
+    passed = sum(1 for r in results if r["passed"])
+    total = len(results)
+
+    for r in results:
+        status = "✅ PASS" if r["passed"] else "❌ FAIL"
+        print(f"\n{status} | Case {r['id']} ({r['type']})")
+        print(f"   Q: {r['question']}")
+        if not r["passed"]:
+            print(f"   blocked_match: {r['blocked_match']}")
+            print(f"   phrases_match: {r['phrases_match']}")
+            print(f"   groups_matched: {r['groups_matched']}")
+            print(f"   answer: {r['answer_preview']}")
+
+    print("\n" + "=" * 60)
+    print(f"RESULT: {passed}/{total} passed ({100 * passed // total}%)")
+    print("=" * 60 + "\n")
+
+    return passed, total
+
+
+if __name__ == "__main__":
+    run_eval()
