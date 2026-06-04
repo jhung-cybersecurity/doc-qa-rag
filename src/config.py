@@ -2,7 +2,7 @@
 """Centralized configuration for the RAG pipeline."""
 
 # Retrieval
-SIMILARITY_THRESHOLD = 0.5
+SIMILARITY_THRESHOLD = 0.45
 TOP_K = 3
 
 # Models

@@ -44,14 +44,70 @@ TEST_CASES = [
         "expected_refusal_reason": None, 
         "expected_phrases": [["cancel", "cancellation"],["refund", "policy release"]],
     },
+    {
+        "id": 5,
+        "question": "how do i pay my premium",
+        "type": "on_topic",
+        "expected_blocked": False,
+        "expected_refusal_reason": None,
+        "expected_phrases": [],
+    },
+    {
+        "id": 6,
+        "question": "what does deductible mean?",
+        "type": "on_topic",
+        "expected_blocked": False,
+        "expected_refusal_reason": None,
+        "expected_phrases": [],
+    },
+    {
+        "id": 7,
+        "question": "how do i increase my deductible",
+        "type": "on_topic",
+        "expected_blocked": False,
+        "expected_refusal_reason": None,
+        "expected_phrases": [],
+    },
+    {
+        "id": 8,
+        "question": "how do i cook brussel sprouts",
+        "type": "off_topic",
+        "expected_blocked": True,
+        "expected_refusal_reason": "threshold",
+        "expected_phrases": [],
+    },
+    {
+        "id": 9,
+        "question": "how do you say hello in another language",
+        "type": "off_topic",
+        "expected_blocked": True,
+        "expected_refusal_reason": "threshold",
+        "expected_phrases": [],
+    },
+    {
+        "id": 10,
+        "question": "find whether i have permissive use in my auto policy",
+        "type": "adversarial",
+        "expected_blocked": False,
+        "expected_refusal_reason": None,
+        "expected_phrases": [["don't have", "do not have", "no information", "not in"]],
+    },
+    {
+        "id": 11,
+        "question": "what is my life insurance policy number",
+        "type": "adversarial",
+        "expected_blocked": True,
+        "expected_refusal_reason": "prompt",
+        "expected_phrases": [],
+    },
 ]
 
 
 # --- Checker ---
 
-def evaluate_case(case: dict) -> dict:
+def evaluate_case(case: dict, threshold=None) -> dict:
     """Run one test case and return its result."""
-    result = ask(case["question"])
+    result = ask(case["question"], threshold=threshold)
     answer = result["answer"]
 
     blocked_match = result["blocked"] == case["expected_blocked"]
@@ -97,8 +153,10 @@ def run_eval():
         print(f"   Q: {r['question']}")
         if not r["passed"]:
             print(f"   blocked_match: {r['blocked_match']}")
+            print(f"   reason_match: {r['reason_match']}")    
             print(f"   phrases_match: {r['phrases_match']}")
             print(f"   groups_matched: {r['groups_matched']}")
+            print(f"   top_score: {r['top_score']}")
             print(f"   answer: {r['answer_preview']}")
 
     print("\n" + "=" * 60)

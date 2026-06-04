@@ -65,8 +65,10 @@ def _detect_refusal(answer: str) -> bool:
     answer_lower = answer.lower()
     return any(phrase in answer_lower for phrase in REFUSAL_PHRASES)
 
-def ask(question: str) -> dict:
-    """Run one query through the RAG piepline. Returns a structured results."""
+def ask(question, threshold=None):
+    """Run one query through the RAG pipeline. Returns a structured result."""
+    if threshold is None:
+        threshold = SIMILARITY_THRESHOLD
     # retrieve
     retriever = index.as_retriever(similarity_top_k=TOP_K)
     nodes = retriever.retrieve(question)
@@ -74,7 +76,7 @@ def ask(question: str) -> dict:
     top_score = nodes[0].score if nodes else 0.0
 
     # Layer 1: threshold gate
-    if not nodes or nodes[0].score < SIMILARITY_THRESHOLD:
+    if not nodes or nodes[0].score < threshold:
         refusal = "I can only answer questions about your auto policy."
         log_query(
             question=question,
