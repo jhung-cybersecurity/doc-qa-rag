@@ -3,7 +3,7 @@
 
 # Retrieval
 SIMILARITY_THRESHOLD = 0.45
-TOP_K = 3
+TOP_K = 5
 
 # Models
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"

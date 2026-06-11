@@ -94,7 +94,11 @@ def ask(question, threshold=None):
         }
 
     # build context + user message
-    context = "\n\n".join(node.text for node in nodes)
+    context = "\n\n".join(
+    f"[Source: {node.metadata.get('file_name', 'unknown')}, "
+    f"page {node.metadata.get('page_label', 'n/a')}]\n{node.text}"
+    for node in nodes
+)
     user_message = f"""<sources>
 {context}
 </sources>
@@ -117,6 +121,7 @@ Question: {question}"""
             "page": node.metadata.get("page_label", "n/a"),
             "score": node.score,
             "text": node.text,
+            "source": node.metadata.get("file_name", "unknown"),
         }
         for node in nodes
     ]

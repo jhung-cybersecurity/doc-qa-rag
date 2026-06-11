@@ -21,7 +21,7 @@ def main():
         if result ["sources"]:
             print("---Sources---")
             for i, source in enumerate(result["sources"], start=1):
-                print(f"\n[Source {i}] Score: {source['score']:.4f} | Page: {source['page']}")
+                print(f"\n[Source {i}] Score: {source['score']:.4f} | Page: {source['page']} | From: {source['source']}")
                 print(f"{source['text'][:200]}...")
 
 
