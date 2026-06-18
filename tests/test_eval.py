@@ -133,6 +133,8 @@ def evaluate_case(case: dict, threshold=None) -> dict:
         "groups_matched": groups_matched,
         "top_score": result["top_score"],
         "answer_preview": answer[:100] + "..." if len(answer) > 100 else answer,
+        "blocked": result["blocked"],
+        "expected_blocked": case["expected_blocked"],
     }
 
 # --- Reporter ---
@@ -164,7 +166,6 @@ def run_eval():
     print("=" * 60 + "\n")
 
     return passed, total
-
 
 if __name__ == "__main__":
     run_eval()
