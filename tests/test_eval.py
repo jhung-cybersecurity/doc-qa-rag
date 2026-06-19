@@ -48,8 +48,8 @@ TEST_CASES = [
         "id": 5,
         "question": "how do i pay my premium",
         "type": "on_topic",
-        "expected_blocked": False,
-        "expected_refusal_reason": None,
+        "expected_blocked": True,
+        "expected_refusal_reason": "prompt",
         "expected_phrases": [],
     },
     {

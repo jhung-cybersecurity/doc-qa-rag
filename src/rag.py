@@ -99,6 +99,7 @@ def ask(question, threshold=None):
     f"page {node.metadata.get('page_label', 'n/a')}]\n{node.text}"
     for node in nodes
 )
+
     user_message = f"""<sources>
 {context}
 </sources>
