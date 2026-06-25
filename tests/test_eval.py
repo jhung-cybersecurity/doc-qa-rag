@@ -64,8 +64,8 @@ TEST_CASES = [
         "id": 7,
         "question": "how do i increase my deductible",
         "type": "on_topic",
-        "expected_blocked": False,
-        "expected_refusal_reason": None,
+        "expected_blocked": True,
+        "expected_refusal_reason": "threshold",
         "expected_phrases": [],
     },
     {

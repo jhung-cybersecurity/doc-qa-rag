@@ -1,3 +1,12 @@
+## DOC-QA-RAG
+This RAG ingests the insurance policy Q&A PDFs and filters irrelevant questions by thresholds followed by a second defense layer using prompts against hallucination.
+
+When the user asks a question, the RAG uses the initial PDF ingestions which are chunked and embedded into ChromaDB. Then it uses similarity search to retrieve the top-K chunks. If the top chunk scores below 0.45 it rejects before the LLM. Claude then answers using only the retrieved chunks via a strict prompt, and declines if they do not contain the answer.
+
+## Stack Highlights 
+LlamaIndex, ChromaDB, local embeddings (BAAI/bge-small-en-v1.5, run on-device for zero embedding cost and document privacy), Claude-opus-4-8, FastAPI, Docker.
+
+
 ## Architecture
 
 src/
