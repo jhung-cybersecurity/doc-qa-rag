@@ -6,6 +6,17 @@ When the user asks a question, the RAG uses the initial PDF ingestions which are
 ## Stack Highlights 
 LlamaIndex, ChromaDB, local embeddings (BAAI/bge-small-en-v1.5, run on-device for zero embedding cost and document privacy), Claude-opus-4-8, FastAPI, Docker.
 
+## Two-Layer Defense
+The first layer is the similarity threshold. It sets a threshold where the retrieval only returns the top chunk, if it scores higher than 0.45. Initially it was 0.50 as an intuition to get the RAG working. After running sweep threshold testings, I lowered it to 0.45 to allow borderline questions through. Blocking a question that the LLM could have answered is worse than letting a borderline question through. 
+
+The second layer is prompt. It's a strict system prompt that forces Claude to answer only from the provided `<sources>` not from its own training data. If the sources do not contain the answer, it will say so instead of guessing and making up answers.
+
+Example: Case #5 — "How do I pay my premium?", 0.49 score
+Layer 1 let the chunk pass because it's above 0.45
+Layer 2 blocked it because the `<sources>` do not have any information on how to pay the insurance premium therefore it tells the user "I don't have that information" instead of making up a payment method. 
+
+
+
 
 ## Architecture
 
