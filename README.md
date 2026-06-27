@@ -15,6 +15,24 @@ Example: Case #5 — "How do I pay my premium?", 0.49 score
 Layer 1 let the chunk pass because it's above 0.45
 Layer 2 blocked it because the `<sources>` do not have any information on how to pay the insurance premium therefore it tells the user "I don't have that information" instead of making up a payment method. 
 
+## Setup
+1. Clone: `git clone https://github.com/jhung-cybersecurity/doc-qa-rag` then `cd doc-qa-rag`
+2. Venv: `python -m venv venv`
+3. Activate: `venv\Scripts\Activate.ps1`
+4. Install: `pip install -r requirements.txt`
+5. Secret: API key `ANTHROPIC_API_KEY=your-key-here` goes in `.env` and is activated in `.gitignore` to make sure it is never committed. 
+6. Run: `python -m src.main`
+
+- When running the repo for the first time, expect a small delay because the repo builds the index and downloads the embedding model.
+- Go to (console.anthropic.com) to get the API key
+- Activation is OS-specific. This repo is for Windows PowerShell (`venv\Scripts\Activate.ps1`). A Mac/Linux user needs `source venv/bin/activate`.
+
+
+
+
+
+
+
 
 
 
