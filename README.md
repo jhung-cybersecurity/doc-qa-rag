@@ -27,9 +27,17 @@ Layer 2 blocked it because the `<sources>` do not have any information on how to
 - Go to (console.anthropic.com) to get the API key
 - Activation is OS-specific. This repo is for Windows PowerShell (`venv\Scripts\Activate.ps1`). A Mac/Linux user needs `source venv/bin/activate`.
 
+## Docker
 
+1. Build the image: `docker build -t doc-qa-rag .`
+   Reads the Dockerfile and produces a named image.
 
+2. Run a container: `docker run -p 8000:8000 --env-file .env -v ${PWD}/chroma_db:/app/chroma_db doc-qa-rag`
+   - `-p 8000:8000` exposes the API so you can reach it from a browser
+   - `--env-file .env` loads the environment variables from the host's `.env` at runtime
+   - `-v ${PWD}/chroma_db:/app/chroma_db` mounts a host folder so the index persists after the container stops
 
+3. Secrets in `.env` are injected at runtime, never baked into the image, because image layers are inspectable and anyone who pulls the image could read a baked-in key.
 
 
 
