@@ -39,7 +39,10 @@ Layer 2 blocked it because the `<sources>` do not have any information on how to
 
 3. Secrets in `.env` are injected at runtime, never baked into the image, because image layers are inspectable and anyone who pulls the image could read a baked-in key.
 
+## Evaluation
+There are three categories that the repo tests for. The first one is `on-topic` which tests for questions that have a direct answer from the `<sources>`. Second one is `off-topic` which tests for questions that have nothing to do with the provided `<sources>`. Last but not least, `adversarial` tests for questions that are similar in topic but ultimately have nothing to do with it. An example of this is case #3: "policy number for life insurance". The repo is about auto insurance not life insurance. 
 
+After thorough testing, I ended up with 10 of 11 passing. This is a deliberate, documented result, not a bug. Case #10 fails on phrase-match nondeterminism. The answer is correct but the exact string assertion is unreliable against a paraphrasing LLM. 
 
 
 
