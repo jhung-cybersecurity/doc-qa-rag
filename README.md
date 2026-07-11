@@ -20,9 +20,14 @@ The first layer is the similarity threshold. It sets a threshold where the retri
 
 The second layer is prompt. It's a strict system prompt that forces Claude to answer only from the provided `<sources>` not from its own training data. If the sources do not contain the answer, it will say so instead of guessing and making up answers.
 
-Example: Case #5 — "How do I pay my premium?", 0.49 score
-Layer 1 let the chunk pass because it's above 0.45
-Layer 2 blocked it because the `<sources>` do not have any information on how to pay the insurance premium therefore it tells the user "I don't have that information" instead of making up a payment method. 
+Example: Case #11 — "what is my life insurance policy number", 0.65 score
+Layer 1 let the chunk pass because it scores above 0.45. The words "policy number"
+and "insurance" appear throughout the auto and renters docs, so shared vocabulary
+inflates the similarity score.
+Layer 2 (the strict prompt) then declines in the answer text: the `<sources>` cover
+auto and renters insurance only, never life insurance, so Claude states it has no
+such information instead of inventing a policy number. Note this is a prompt-driven
+decline surfaced in the response, not a hard threshold block.
 
 ## Setup
 1. Clone: `git clone https://github.com/jhung-cybersecurity/doc-qa-rag` then `cd doc-qa-rag`
@@ -88,7 +93,12 @@ When a query is blocked, `blocked: true` and `refusal_reason` indicates which de
 3. Secrets in `.env` are injected at runtime, never baked into the image, because image layers are inspectable and anyone who pulls the image could read a baked-in key.
 
 ## Evaluation
-There are three categories that the repo tests for. The first one is `on-topic` which tests for questions that have a direct answer from the `<sources>`. Second one is `off-topic` which tests for questions that have nothing to do with the provided `<sources>`. Last but not least, `adversarial` tests for questions that are similar in topic but ultimately have nothing to do with it. An example of this is case #3: "policy number for life insurance". The repo is about auto insurance not life insurance. 
+There are four categories that the repo tests for. The first one is `on-topic` which tests for questions that have a direct answer from the `<sources>`. Second one is `off-topic` which tests for questions that have nothing to do with the provided `<sources>`. Third is `adversarial` tests for questions that are similar in topic but ultimately have nothing to do with it. An example of this is case #3: "policy number for life insurance". The corpus covers auto and renters insurance, not life insurance. Last but not least, `corpus_gap` where it tags questions that are genuinely not covered in `<sources>`.
 
-After thorough testing, I ended up with 8-10/11 passing. This is a deliberate, documented result, not a bug. Case #10 fails on phrase-match nondeterminism. The answer is correct but the exact string assertion is unreliable against a paraphrasing LLM. 
-
+Current result: 10/11 passing. Case 5 ("how do i pay my premium") is a known
+failure, not a harness bug. Its answer exists in the renters policy, but the
+Premium Payment section is currently merged into a larger chunk, so retrieval
+does not surface it. Confirmed by inspecting the index directly. Case 6 ("what
+does deductible mean?") passes but rides the same chunk near the 0.45 gate and
+can flake between runs. The fix (structure-aware chunking) is in progress; case 5
+defines the target and stays red until it lands.
