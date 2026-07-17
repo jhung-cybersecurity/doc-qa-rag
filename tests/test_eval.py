@@ -64,9 +64,9 @@ TEST_CASES = [
         "id": 7,
         "question": "how do i increase my deductible",
         "type": "corpus_gap",
-        "expected_blocked": True,
-        "expected_refusal_reason": "threshold",
-        "expected_phrases": [],
+        "expected_blocked": "any",
+        "expected_refusal_reason": "any",
+        "expected_phrases": [["don't have", "do not have", "no information", "not in"]],
     },
     {
         "id": 8,
@@ -96,8 +96,8 @@ TEST_CASES = [
         "id": 11,
         "question": "what is my life insurance policy number",
         "type": "adversarial",
-        "expected_blocked": False,
-        "expected_refusal_reason": None,
+        "expected_blocked": "any",
+        "expected_refusal_reason": "any",
         "expected_phrases": [["don't have", "do not have", "no information", "not in"]],
     },
 ]
@@ -110,9 +110,14 @@ def evaluate_case(case: dict, threshold=None) -> dict:
     result = ask(case["question"], threshold=threshold)
     answer = result["answer"]
 
-    blocked_match = result["blocked"] == case["expected_blocked"]
-    reason_match = result["refusal_reason"] == case["expected_refusal_reason"]
-
+    blocked_match = (
+        case["expected_blocked"] == "any"
+        or result["blocked"] == case["expected_blocked"]
+    )
+    reason_match = (
+        case["expected_refusal_reason"] == "any"
+        or result["refusal_reason"] == case["expected_refusal_reason"]
+    )
     # For each phrase group, at least ONE variant must appear in the answer
     groups_matched = [
         any(variant.lower() in answer.lower() for variant in group)

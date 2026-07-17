@@ -1,15 +1,32 @@
 ## DOC-QA-RAG
 This RAG ingests the insurance policy Q&A PDFs and filters irrelevant questions by thresholds followed by a second defense layer using prompts against hallucination.
 
-When the user asks a question, the RAG uses the initial PDF ingestions which are chunked and embedded into ChromaDB. Then it uses similarity search to retrieve the top-K chunks. If the top chunk scores below 0.45 it rejects before the LLM. Claude then answers using only the retrieved chunks via a strict prompt, and declines if they do not contain the answer.
+When the user asks a question, the service draws on PDFs that were ingested at startup: section headers are marked, split on those headers with MarkdownNodeParser so each policy section becomes its own chunk, then embedded into ChromaDB. Then it uses similarity search to retrieve the top-K chunks. If the top chunk scores below 0.45 it rejects before the LLM. Claude then answers using only the retrieved chunks via a strict prompt, and declines if they do not contain the answer.
 
 ## Stack Highlights 
 LlamaIndex, ChromaDB, local embeddings (BAAI/bge-small-en-v1.5, run on-device for zero embedding cost and document privacy), Claude-opus-4-8, FastAPI, Docker.
 
+## Chunking Strategy
+Initial chunking was size-based, which fused unrelated sections together. The renters
+policy's "Deductibles" definition ended up merged into the Declarations boilerplate, so
+its embedding was dominated by company name and policy number text. Queries like "what
+does deductible mean?" could never retrieve it, even though the definition was in the corpus.
+
+Semantic chunking (SemanticSplitterNodeParser) was tried next and did not help: at
+breakpoint thresholds of both 95 and 85 the chunk count and boundaries were identical,
+because to a small embedding model, adjacent policy clauses have no sharp meaning-jump
+to split on.
+
+The fix was to exploit the documents' own structure. A preprocessing step marks known
+section headers ("Deductibles", "Premium Payment", etc.) with markdown syntax, then
+MarkdownNodeParser splits on them. Chunk count went from 8 to 21, and each policy section
+now stands as its own chunk. This is deliberately fitted to this corpus: the header list
+is hand-maintained and would need a header-detection step to generalize to arbitrary policies.
+
 ## Architecture
 ```
    src/
-   ├── config.py          # Threshold, model names, paths
+   ├── config.py          # Threshold, top-k, model names, paths
    ├── prompts.py         # Strict system prompt with <sources> tags
    ├── logging_config.py  # JSONL query logger
    ├── rag.py             # Pipeline setup + ask() function
@@ -20,7 +37,7 @@ The first layer is the similarity threshold. It sets a threshold where the retri
 
 The second layer is prompt. It's a strict system prompt that forces Claude to answer only from the provided `<sources>` not from its own training data. If the sources do not contain the answer, it will say so instead of guessing and making up answers.
 
-Example: Case #11 — "what is my life insurance policy number", 0.65 score
+Example: Case #11 — "what is my life insurance policy number", 0.604 score
 Layer 1 let the chunk pass because it scores above 0.45. The words "policy number"
 and "insurance" appear throughout the auto and renters docs, so shared vocabulary
 inflates the similarity score.
@@ -95,10 +112,18 @@ When a query is blocked, `blocked: true` and `refusal_reason` indicates which de
 ## Evaluation
 There are four categories that the repo tests for. The first one is `on-topic` which tests for questions that have a direct answer from the `<sources>`. Second one is `off-topic` which tests for questions that have nothing to do with the provided `<sources>`. Third is `adversarial` tests for questions that are similar in topic but ultimately have nothing to do with it. An example of this is case #3: "policy number for life insurance". The corpus covers auto and renters insurance, not life insurance. Last but not least, `corpus_gap` where it tags questions that are genuinely not covered in `<sources>`.
 
-Current result: 10/11 passing. Case 5 ("how do i pay my premium") is a known
-failure, not a harness bug. Its answer exists in the renters policy, but the
-Premium Payment section is currently merged into a larger chunk, so retrieval
-does not surface it. Confirmed by inspecting the index directly. Case 6 ("what
-does deductible mean?") passes but rides the same chunk near the 0.45 gate and
-can flake between runs. The fix (structure-aware chunking) is in progress; case 5
-defines the target and stays red until it lands.
+Current result: 10-11/11 passing, depending on the run. Retrieval is deterministic
+(identical scores every run), but the `blocked` and `refusal_reason` flags are not.
+The cause is `_detect_refusal`, which flags a refusal by substring-matching Claude's
+answer against a fixed phrase list. Claude paraphrases between runs ("I don't have
+information" vs "I don't have any information"), so the same refusal is sometimes
+detected and sometimes missed. This is a known limitation of keyword-based refusal
+detection against a generative model.
+
+Cases 7 and 11 use an `"any"` sentinel on those two fields, because their answers are
+genuinely absent from the corpus and any refusal is correct behavior regardless of which
+layer catches it. Their assertions rest on the answer text instead.
+
+Case 10 ("find whether i have permissive use in my auto policy") deliberately does NOT use
+the sentinel and flakes red on some runs. Its answer IS in the auto policy, so a decline is
+the pipeline being wrong, not an alternate valid path. The red is kept as an honest signal that refusal detection sometimes misfires on an answered query, flagging a real answer as a refusal.

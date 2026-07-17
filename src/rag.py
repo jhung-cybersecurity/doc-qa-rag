@@ -1,5 +1,6 @@
 # src/rag.py
 """Core RAG pipeline: setup + ask() function."""
+import re
 import chromadb
 from dotenv import load_dotenv
 from llama_index.core import (
@@ -7,8 +8,9 @@ from llama_index.core import (
     SimpleDirectoryReader,
     StorageContext,
     Settings,
+    Document,
 )
-from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.node_parser import MarkdownNodeParser
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.anthropic import Anthropic
 from llama_index.vector_stores.chroma import ChromaVectorStore
@@ -19,8 +21,6 @@ from src.config import (
     TOP_K,
     EMBEDDING_MODEL,
     LLM_MODEL,
-    CHUNK_SIZE,
-    CHUNK_OVERLAP,
     CHROMA_PERSIST_PATH,
     COLLECTION_NAME,
 )
@@ -38,11 +38,24 @@ REFUSAL_PHRASES = [
 
 load_dotenv()
 
+HEADERS = [
+    "Deductibles", "Premium Payment", "Covered Perils", "Exclusions",
+    "Filing a Claim", "Cancellation and Renewal",
+    "Section I - Personal Property Coverage", "Section II - Personal Liability Coverage",
+    "Collision Coverage", "Comprehensive Coverage", "Termination", "Premium Refund",
+]
+
+def mark_headers(text: str) -> str:
+    """Prefix known header lines with '## ' so MarkdownNodeParser can split on them."""
+    for h in HEADERS:
+        text = re.sub(rf"(?m)^{re.escape(h)}\s*$", f"## {h}", text)
+    return text
+
 # --- Module-level setup (runs once on import) ---
 
 Settings.llm = Anthropic(model=LLM_MODEL)
 Settings.embed_model = HuggingFaceEmbedding(model_name=EMBEDDING_MODEL)
-Settings.node_parser = SentenceSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+Settings.node_parser = MarkdownNodeParser()
 
 chroma_client = chromadb.PersistentClient(path=CHROMA_PERSIST_PATH)
 chroma_collection = chroma_client.get_or_create_collection(COLLECTION_NAME)
@@ -51,13 +64,17 @@ storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
 if chroma_collection.count() == 0:
     print("First run — ingesting PDF...")
-    documents = SimpleDirectoryReader("data").load_data()
+    raw_docs = SimpleDirectoryReader("data").load_data()
+    documents = [
+        Document(text=mark_headers(d.text), metadata=d.metadata)
+        for d in raw_docs
+    ]
+
     index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
     print(f"Ingested {chroma_collection.count()} chunks.\n")
 else:
     print(f"Loading existing index ({chroma_collection.count()} chunks)...\n")
     index = VectorStoreIndex.from_vector_store(vector_store)
-
 
 # --- Per-query function ---
 def _detect_refusal(answer: str) -> bool:

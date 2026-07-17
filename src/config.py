@@ -8,8 +8,6 @@ TOP_K = 5
 # Models
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 LLM_MODEL = "claude-opus-4-8"
-CHUNK_SIZE = 512
-CHUNK_OVERLAP = 50
 
 # ChromaDB
 CHROMA_PERSIST_PATH = "./chroma_db"
