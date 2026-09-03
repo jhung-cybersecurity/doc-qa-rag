@@ -4,7 +4,9 @@ This RAG ingests the insurance policy Q&A PDFs and filters irrelevant questions 
 When the user asks a question, the service draws on PDFs that were ingested at startup: section headers are marked, split on those headers with MarkdownNodeParser so each policy section becomes its own chunk, then embedded into ChromaDB. Then it uses similarity search to retrieve the top-K chunks. If the top chunk scores below 0.45 it rejects before the LLM. Claude then answers using only the retrieved chunks via a strict prompt, and declines if they do not contain the answer.
 
 ## Stack Highlights 
-LlamaIndex, ChromaDB, local embeddings (BAAI/bge-small-en-v1.5, run on-device for zero embedding cost and document privacy), Claude-opus-4-8, FastAPI, Docker.
+LlamaIndex, ChromaDB, local embeddings (BAAI/bge-small-en-v1.5, run on-device for zero embedding cost and document privacy), claude-sonnet-4-5-20250929, FastAPI, Docker.
+
+Note: Anthropic deprecated temperature for newer models, and llama-index-llms-anthropic==0.11.3 sends it by default, causing /ask to return 500. Will bump once a patched release ships.
 
 ## Chunking Strategy
 Initial chunking was size-based, which fused unrelated sections together. The renters
